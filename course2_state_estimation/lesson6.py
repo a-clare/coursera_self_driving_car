@@ -3,6 +3,9 @@ import math
 import random
 import matplotlib.pyplot as plt
 
+## This is a solution to the UKF example, polar->xy, presented in Lesson6
+## 
+
 def plot_ellipse(figAx, mean, std, c):
     ellipse_range = np.linspace(0, 2 * math.pi, 100)
 
