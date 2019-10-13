@@ -78,7 +78,7 @@ L = np.linalg.cholesky(P)
 N = 2
 num_sigma = 2 * N + 1
 # Kappa, tuning parameter
-k = 2 - N
+k = 2. - N
 # Initialize the sigma point vector.
 sigma_points = np.zeros((num_sigma, N))
 # The first sigma point is the mean before the transformation
@@ -134,7 +134,7 @@ for i in range(num_sigma):
     if i is 0:
         alpha = k / (N + k)
     else:
-        alpha = 0.5 * (1.0 / N + k)
+        alpha = 0.5 * (1.0 / (N + k))
 
     # X mean
     spt_mean[0] = spt_mean[0] + alpha * sigma_points_transformed[i, 0]
@@ -146,7 +146,7 @@ for i in range(np.size(sigma_points_transformed, 0)):
     if i is 0:
         alpha = k / (N + k)
     else:
-        alpha = 0.5 * (1.0 / N + k)
+        alpha = 0.5 * (1.0 / (N + k))
     
     # The observation
     y_i = sigma_points_transformed[i, :].reshape(2, 1)
