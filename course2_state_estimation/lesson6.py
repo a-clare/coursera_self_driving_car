@@ -40,7 +40,7 @@ ax2.plot(obs_xy[:, 0], obs_xy[:, 1], 'b.')
 plot_ellipse(ax2, mean_obs_xy, std_obs_xy, 'g')
 ax2.set(xlabel='x', ylabel='y', title='XY')
 plt.grid(True)
-plt.savefig('polar_vs_xy_data_comparsion.png', dpt=300)
+plt.savefig('images/polar_vs_xy_data_comparsion.png', dpt=300)
 plt.show()
 
 # Linearized transform
@@ -61,8 +61,9 @@ ax1.set(xlabel='r', ylabel=r"$\Theta$", title='Polar')
 ax2.plot(obs_xy[:, 0], obs_xy[:, 1], 'b.')
 ax2.plot(obs_xy_lin[:, 0], obs_xy_lin[:, 1], 'm.')
 plot_ellipse(ax2, mean_obs_xy, std_obs_xy, 'g')
+plot_ellipse(ax2, np.mean(obs_xy_lin, axis=0), np.std(obs_xy_lin, axis=0), 'm')
 ax2.set(xlabel='x', ylabel='y', title='XY')
-plt.savefig('polar_vs_xs_vs_linear_transformed.png', dpt=300)
+plt.savefig('images/polar_vs_xs_vs_linear_transformed.png', dpt=300)
 plt.show()
 
 
@@ -117,7 +118,7 @@ ax2.plot(obs_xy[:, 0], obs_xy[:, 1], 'b.')
 plot_ellipse(ax2, mean_obs_xy, std_obs_xy, 'g')
 ax2.plot(sigma_points_transformed[:, 0], sigma_points_transformed[:, 1], 'y*', markersize=12)
 ax2.set(xlabel='x', ylabel='y', title='XY')
-plt.savefig('calculated_sigma_points.png', dpt=300)
+plt.savefig('images/calculated_sigma_points.png', dpt=300)
 plt.show()
 
 # Need to now compute the mean and covariance for the transformed points
@@ -168,5 +169,5 @@ ax2.plot(sigma_points_transformed[:, 0], sigma_points_transformed[:, 1], 'y*', m
 ax2.plot(spt_mean[0], spt_mean[1], 'r*', markersize=12)
 plot_ellipse(ax2, spt_mean, spt_std, 'r')
 ax2.set(xlabel='x', ylabel='y', title='XY')
-plt.savefig('final_comparison_unscented_vs_real.png', dpt=300)
+plt.savefig('images/final_comparison_unscented_vs_real.png', dpt=300)
 plt.show()
