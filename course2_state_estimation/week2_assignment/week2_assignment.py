@@ -37,6 +37,7 @@ x_est[0] = np.array([x_init, y_init, th_init]) # initial state
 P_est[0] = np.diag([1, 1, 0.1]) # initial state covariance
 # Initialze the state uncertainity matrix
 P_check = P_est[0]
+x_check = x_est[0].reshape(3, 1)
 
 def wraptopi(x):
     if x > np.pi:
@@ -51,13 +52,38 @@ def wraptopi(x):
 def measurement_update(lk, rk, bk, P_check, x_check):
     
     # 1. Compute measurement Jacobian
-
+    # Our measurement model consists of r and phi. Distance and 
+    # bearing to a landmark. Need to take the partial derivatives 
+    # of the two equations (shown in the homework, y_k) with respect
+    # to our three unkowns x_k, y_k, omega_k 
+    # Our first measurement equation is:
+    # r = sqrt((x_l - x_k - d*cos(theta_k)) ^2 + (y_l - y_k - d*sin(theta_k)) ^2)
+    cos_theta = cos(x_check[2])
+    sin_theta = sin(x_check[2])
+    # These are the two terms inside the square root
+    delta_x = lk[0] - x_check[0] - d * cos_theta
+    delta_y = lk[1] - x_check[1] - d * sin_theta
+    r = sqrt(delta_x**2 + delta_y**2)
+    # The second measurement model
+    phi = wraptopi(atan2(delta_y, delta_x) - x_check[2])
+    
+    # Our jacobian is a 2x3, since we have 2 observations (r/phi), and 
+    # 3 unknowns (x, y, theta)
+    H = np.array([
+        [-delta_x / r,   -delta_y / r,     d * (delta_x * sin_theta - delta_y * cos_theta) / r],
+        [delta_y / r**2, -delta_x / r**2, -d * (delta_y * sin_theta + delta_x * cos_theta) / r**2]]).reshape(2, 3)
+    
     # 2. Compute Kalman Gain
-
+    K = P_check @ H.T @ np.linalg.inv(H @ P_check @ H.T + cov_y)
+    # Innovation sequence
+    z = np.vstack([rk - r, wraptopi(bk) - phi])
+    
     # 3. Correct predicted state (remember to wrap the angles to [-pi,pi])
+    x_check = x_check + K @ z
+    x_check[2] = wraptopi(x_check[2])
 
     # 4. Correct covariance
-
+    P_check = (np.eye(3) - K @ H) @ P_check
     return x_check, P_check
 
 
@@ -66,8 +92,6 @@ for k in range(1, len(t)):  # start at 1 because we've set the initial predicito
     delta_t = t[k] - t[k - 1]  # time step (difference between timestamps)
     
     # 1. Update state with odometry readings (remember to wrap the angles to [-pi,pi])
-    # This is the state vector at the previous step
-    x_check = x_est[k - 1].reshape(3, 1)
     # Break out theta before update since its used in several spots
     theta = x_check[2]
     sin_theta_delta_t = sin(theta) * delta_t
@@ -76,7 +100,7 @@ for k in range(1, len(t)):  # start at 1 because we've set the initial predicito
     x_check[0] += cos_theta_delta_t * v[k]
     x_check[1] += sin_theta_delta_t * v[k]
     x_check[2] += delta_t * om[k]
-    #x_check[2] = wraptopi(x_check[2])
+    x_check[2] = wraptopi(x_check[2])
     
     # 2. Motion model jacobian with respect to last state
     F_km = np.array([
@@ -93,6 +117,7 @@ for k in range(1, len(t)):  # start at 1 because we've set the initial predicito
     P_check = F_km @ P_check @ F_km.T + L_km @ Q_km @ L_km.T
 
     # 5. Update state estimate using available landmark measurements
+    print("Measurement update number #" + str(k))
     for i in range(len(r[k])):
         x_check, P_check = measurement_update(l[i], r[k, i], b[k, i], P_check, x_check)
 
@@ -102,6 +127,7 @@ for k in range(1, len(t)):  # start at 1 because we've set the initial predicito
     x_est[k, 2] = x_check[2]
     P_est[k, :, :] = P_check
 
+
 e_fig = plt.figure()
 ax = e_fig.add_subplot(111)
 ax.plot(x_est[:, 0], x_est[:, 1])
@@ -110,7 +136,7 @@ plt.plot(x_est[-1, 0], x_est[-1, 1], 'r^')
 ax.set_xlabel('x [m]')
 ax.set_ylabel('y [m]')
 ax.set_title('Estimated trajectory')
-plt.savefig('images/week2_trajectory_xy_no_update_step.png', dpt=300)
+plt.savefig('images/week2_trajectory.png', dpt=300)
 plt.show()
 
 e_fig = plt.figure()
@@ -119,7 +145,7 @@ ax.plot(t[:], x_est[:, 2])
 ax.set_xlabel('Time [s]')
 ax.set_ylabel('theta [rad]')
 ax.set_title('Estimated trajectory')
-plt.savefig('images/week2_trajectory_time_no_update_step.png', dpt=300)
+plt.savefig('images/week2_trajectory.png', dpt=300)
 plt.show()
 
 
@@ -140,7 +166,7 @@ ax.set_xlabel('Time [s]')
 ax.set_ylabel('theta [rad]')
 ax.set_title('Estimated trajectory')
 ax.legend()
-plt.savefig('images/week2_uncertainity_no_update_step.png', dpt=300)
+plt.savefig('images/week2_uncertainity.png', dpt=300)
 plt.show()
 
 with open('submission.pkl', 'wb') as f:
