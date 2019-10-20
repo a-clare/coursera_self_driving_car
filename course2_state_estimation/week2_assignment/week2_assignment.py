@@ -10,6 +10,11 @@ def wraptopi(x):
         x = x + (np.floor(x / (-2 * np.pi)) + 1) * 2 * np.pi
     return x
 
+# lk = landmark x,y
+# rk = range measurements
+# bk = bearing to each landmark
+#
+#
 def measurement_update(lk, rk, bk, P_check, x_check):
     
     # 1. Compute measurement Jacobian
@@ -65,30 +70,33 @@ for k in range(1, len(t)):  # start at 1 because we've set the initial predicito
     # 1. Update state with odometry readings (remember to wrap the angles to [-pi,pi])
     # This is the state vector at the previous step
     x_check = x_est[k - 1].reshape(3, 1)
-    # Propogate the state forward to the current step, first build the motion
-    # model matrix, phi.
-    # x_check[2] is our best estimate of theta, or theta at (k - 1)
-    phi = np.array([
-        [cos(x_check[2]) * delta_t, 0],
-        [sin(x_check[2]) * delta_t, 0],
-        [0, delta_t]])
-    # According to the equations provided we need to use v_k and w_k, NOT
-    # k-1
-    odom = np.array([v[k], om[k]])
-    x_check = x_check + phi @ odom.reshape(2, 1)
-    x_check[2] = wraptopi(x_check[2])
+    # Break out theta before update since its used in several spots
+    theta = x_check[2]
+    sin_theta_delta_t = sin(theta) * delta_t
+    cos_theta_delta_t = cos(theta) * delta_t
+    # Propogate the state forward to the current step
+    x_check[0] += cos_theta_delta_t * v[k]
+    x_check[1] += sin_theta_delta_t * v[k]
+    x_check[2] += delta_t * om[k]
+    #x_check[2] = wraptopi(x_check[2])
     
     # 2. Motion model jacobian with respect to last state
-    F_km = np.zeros([3, 3])
+    F_km = np.array([
+        [1.0, 0.0, -sin_theta_delta_t * v[k]],
+        [0.0, 1.0, cos_theta_delta_t * v[k]],
+        [0.0, 0.0, 1.0]])
 
     # 3. Motion model jacobian with respect to noise
-    L_km = np.zeros([3, 2])
-
+    L_km = np.array([
+        [cos_theta_delta_t, 0.0],
+        [sin_theta_delta_t, 0.0],
+        [0.0, 1.0]])
     # 4. Propagate uncertainty
+    P_check = F_km @ P_check @ F_km.T + L_km @ Q_km @ L_km.T
 
     # 5. Update state estimate using available landmark measurements
-    # for i in range(len(r[k])):
-    #     x_check, P_check = measurement_update(l[i], r[k, i], b[k, i], P_check, x_check)
+    for i in range(len(r[k])):
+        x_check, P_check = measurement_update(l[i], r[k, i], b[k, i], P_check, x_check)
 
     # Set final state predictions for timestep
     x_est[k, 0] = x_check[0]
@@ -104,7 +112,7 @@ plt.plot(x_est[-1, 0], x_est[-1, 1], 'r^')
 ax.set_xlabel('x [m]')
 ax.set_ylabel('y [m]')
 ax.set_title('Estimated trajectory')
-plt.savefig('images/week2_trajectory_xy_no_update_step1.png', dpt=300)
+plt.savefig('images/week2_trajectory_xy_no_update_step.png', dpt=300)
 plt.show()
 
 e_fig = plt.figure()
@@ -113,7 +121,28 @@ ax.plot(t[:], x_est[:, 2])
 ax.set_xlabel('Time [s]')
 ax.set_ylabel('theta [rad]')
 ax.set_title('Estimated trajectory')
-plt.savefig('images/week2_trajectory_time_no_update_step1.png', dpt=300)
+plt.savefig('images/week2_trajectory_time_no_update_step.png', dpt=300)
+plt.show()
+
+
+std_x = np.zeros((len(t), 1))
+std_y = np.zeros((len(t), 1))
+std_theta = np.zeros((len(t), 1))
+for i in range(len(t)):
+    std_x[i] = sqrt(P_est[i, 0, 0])
+    std_y[i] = sqrt(P_est[i, 1, 1])
+    std_theta[i] = sqrt(P_est[i, 2, 2])
+
+e_fig = plt.figure()
+ax = e_fig.add_subplot(111)
+ax.plot(t[:], (std_x[:]), label='Sigma X')
+ax.plot(t[:], (std_y[:]), label='Sigma Y')
+ax.plot(t[:], (std_theta[:]), label='Sigma Theta')
+ax.set_xlabel('Time [s]')
+ax.set_ylabel('theta [rad]')
+ax.set_title('Estimated trajectory')
+ax.legend()
+plt.savefig('images/week2_uncertainity_no_update_step.png', dpt=300)
 plt.show()
 
 with open('submission.pkl', 'wb') as f:
