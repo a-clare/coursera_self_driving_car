@@ -76,6 +76,7 @@ for k in range(1, len(t)):  # start at 1 because we've set the initial predicito
     # k-1
     odom = np.array([v[k], om[k]])
     x_check = x_check + phi @ odom.reshape(2, 1)
+    x_check[2] = wraptopi(x_check[2])
     
     # 2. Motion model jacobian with respect to last state
     F_km = np.zeros([3, 3])
@@ -98,10 +99,12 @@ for k in range(1, len(t)):  # start at 1 because we've set the initial predicito
 e_fig = plt.figure()
 ax = e_fig.add_subplot(111)
 ax.plot(x_est[:, 0], x_est[:, 1])
+plt.plot(x_init, y_init, 'r*')
+plt.plot(x_est[-1, 0], x_est[-1, 1], 'r^')
 ax.set_xlabel('x [m]')
 ax.set_ylabel('y [m]')
 ax.set_title('Estimated trajectory')
-plt.savefig('images/week2_trajectory_xy_no_update_step.png', dpt=300)
+plt.savefig('images/week2_trajectory_xy_no_update_step1.png', dpt=300)
 plt.show()
 
 e_fig = plt.figure()
@@ -110,7 +113,7 @@ ax.plot(t[:], x_est[:, 2])
 ax.set_xlabel('Time [s]')
 ax.set_ylabel('theta [rad]')
 ax.set_title('Estimated trajectory')
-plt.savefig('images/week2_trajectory_time_no_update_step.png', dpt=300)
+plt.savefig('images/week2_trajectory_time_no_update_step1.png', dpt=300)
 plt.show()
 
 with open('submission.pkl', 'wb') as f:
