@@ -3,31 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import *
 
-def wraptopi(x):
-    if x > np.pi:
-        x = x - (np.floor(x / (2 * np.pi)) + 1) * 2 * np.pi
-    elif x < -np.pi:
-        x = x + (np.floor(x / (-2 * np.pi)) + 1) * 2 * np.pi
-    return x
-
-# lk = landmark x,y
-# rk = range measurements
-# bk = bearing to each landmark
-#
-#
-def measurement_update(lk, rk, bk, P_check, x_check):
-    
-    # 1. Compute measurement Jacobian
-
-    # 2. Compute Kalman Gain
-
-    # 3. Correct predicted state (remember to wrap the angles to [-pi,pi])
-
-    # 4. Correct covariance
-
-    return x_check, P_check
-
-
 with open('week2_assignment/data.pickle', 'rb') as f:
     data = pickle.load(f)
 
@@ -62,6 +37,29 @@ x_est[0] = np.array([x_init, y_init, th_init]) # initial state
 P_est[0] = np.diag([1, 1, 0.1]) # initial state covariance
 # Initialze the state uncertainity matrix
 P_check = P_est[0]
+
+def wraptopi(x):
+    if x > np.pi:
+        x = x - (np.floor(x / (2 * np.pi)) + 1) * 2 * np.pi
+    elif x < -np.pi:
+        x = x + (np.floor(x / (-2 * np.pi)) + 1) * 2 * np.pi
+    return x
+
+# lk = landmark x,y
+# rk = range measurements
+# bk = bearing to each landmark
+def measurement_update(lk, rk, bk, P_check, x_check):
+    
+    # 1. Compute measurement Jacobian
+
+    # 2. Compute Kalman Gain
+
+    # 3. Correct predicted state (remember to wrap the angles to [-pi,pi])
+
+    # 4. Correct covariance
+
+    return x_check, P_check
+
 
 for k in range(1, len(t)):  # start at 1 because we've set the initial prediciton
 
