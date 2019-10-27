@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from math import *
 
 class Bicycle():
     def __init__(self):
@@ -73,6 +74,20 @@ for i in range(t_data.shape[0]):
     
 plt.axis('equal')
 plt.plot(x_data, y_data,label='Learner Model')
-plt.plot(x_data2, y_data2s,label='Beta set to 0')
+# plt.plot(x_data2, y_data2s,label='Beta set to 0')
 plt.legend()
+plt.savefig('week4/images/initial_bicycle_solution.png', dpt=300)
+
+plt.show()
+
+radius_computed = np.zeros_like(x_data)
+for i in range(x_data.shape[0]):
+    radius_computed[i] = sqrt((x_data[i] - 0)**2 + (y_data[i] - 10)**2)
+
+plt.axis('equal')
+plt.plot(t_data, radius_computed,label='Learner Model')
+# plt.plot(x_data2, y_data2s,label='Beta set to 0')
+plt.legend()
+plt.savefig('week4/images/initial_bicylce_radius.png', dpt=300)
+
 plt.show()
