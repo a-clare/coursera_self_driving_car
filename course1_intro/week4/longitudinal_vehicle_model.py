@@ -139,6 +139,7 @@ for i in range(t_data.shape[0]):
 # Plot x vs t for visualization
 plt.plot(t_data, x_data)
 plt.grid()
+plt.savefig('week4/images/longitudinal_x_position.png', dpt=300)
 plt.show()
 
 plt.plot(t_data, all_throttle)
