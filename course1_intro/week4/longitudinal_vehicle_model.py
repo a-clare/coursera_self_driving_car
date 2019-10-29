@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from math import *
 
 class Vehicle():
     def __init__(self):
@@ -95,6 +96,7 @@ for i in range(t_data.shape[0]):
     model.step(throttle, alpha)
     
 plt.plot(t_data, v_data)
+plt.savefig('week4/images/longitudinal_constant_throttle_flat_ground.png', dpt=300)
 plt.show()
 
 time_end = 20
@@ -103,15 +105,48 @@ x_data = np.zeros_like(t_data)
 
 # reset the states
 model.reset()
-
-# ==================================
-#  Learner solution begins here
-# ==================================
-
-# ==================================
-#  Learner solution ends here
-# ==================================
-
+# Keep a record of the throttle commands to make sure it matches figure in notebook
+all_throttle = np.zeros_like(t_data)
+# Keep a record of the alpha commands to make sure it matches figure in notebook
+all_alpha = np.zeros_like(t_data)
+for i in range(t_data.shape[0]):
+    # If we are between 0 and 5 seconds, throttle increase
+    if (t_data[i] < 5):
+        # 5.0 comes from 5 second duration
+        # In the notebook assignment it says the throttle starts at 0.2
+        throttle = 0.2 + (0.5 - 0.2) / 5.0 * t_data[i]
+    # If we are between 5 and 15 seconds constant throttle at 50%
+    elif (t_data[i] < 15):
+        throttle = 0.5
+    # If we are between 15 and 20 seconds, decrease throttle to 0
+    else:
+        # 5.0 comes from 5 second duration
+        # In the notebook assignment it says the throttle starts at 0.2
+        throttle = (0.0 - 0.5) / 5.0 * (t_data[i] - 20.0)
+    
+    if (model.x < 60):
+        alpha = atan(3.0/60.0)
+    elif (model.x < 150):
+        alpha = atan(9.0 / 90.0)
+    else:
+        alpha = 0
+        
+    model.step(throttle, alpha)
+    all_throttle[i] = throttle
+    all_alpha[i] = alpha
+    x_data[i] = model.x
+    
 # Plot x vs t for visualization
 plt.plot(t_data, x_data)
+plt.grid()
+plt.show()
+
+plt.plot(t_data, all_throttle)
+plt.grid()
+plt.savefig('week4/images/longitudinal_throttle_ramp.png', dpt=300)
+plt.show()
+
+plt.plot(t_data, all_alpha)
+plt.grid()
+plt.savefig('week4/images/longitudinal_alpha_ramp.png', dpt=300)
 plt.show()
