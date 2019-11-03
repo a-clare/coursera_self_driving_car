@@ -171,8 +171,8 @@ class Controller2D(object):
             """
             # Following notation in the slides, the PID constants
             Kp = 1
-            Ki = 1
-            Kd = 1
+            Ki = 0
+            Kd = 0
 
             dt = t - self.vars.t_previous
             # Velocity error is difference between desired and current
@@ -180,7 +180,7 @@ class Controller2D(object):
             # Accumulate the velocity error (this is the integral term)
             velocity_error_sum = self.vars.velocity_error_sum + velocity_error * dt
             # Error rate
-            velocity_error_rate = (velocity_error - previous_velocity_error) / dt
+            velocity_error_rate = (velocity_error - self.vars.previous_velocity_error) / dt
             # Change these outputs with the longitudinal controller. Note that
             # brake_output is optional and is not required to pass the
             # assignment, as the car will naturally slow down over time.
@@ -206,7 +206,7 @@ class Controller2D(object):
             x_rear_axle = x - L * math.cos(yaw) / 2.0
             y_rear_axle = y - L * math.sin(yaw) / 2.0
             # Calculate the look ahead distance 
-            look_ahead_distance = K_dd * v
+            look_ahead_distance = abs(K_dd * v)
             # Since we are referenced to the rear axle, we need to at least look ahead/infront
             # of the car.
             min_look_ahead_distance = L + look_ahead_distance
@@ -222,7 +222,9 @@ class Controller2D(object):
                 # waypoint.
                 if dist_to_waypoint >= min_look_ahead_distance:
                     set_point = waypoint
+                    break;
             
+            print("Set Point " + str(set_point))
             # With our setpoint, or look ahead waypoint we need to calculate alpha
             delta_x = set_point[0] - x_rear_axle
             delta_y = set_point[1] - x_rear_axle
