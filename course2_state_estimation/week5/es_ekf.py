@@ -14,7 +14,7 @@ from rotations import angle_normalize, rpy_jacobian_axis_angle, skew_symmetric, 
 # This is where you will load the data from the pickle files. For parts 1 and 2, you will use
 # p1_data.pkl. For Part 3, you will use pt3_data.pkl.
 ################################################################################################
-with open('data/pt3_data.pkl', 'rb') as file:
+with open('data/pt1_data.pkl', 'rb') as file:
     data = pickle.load(file)
 
 ################################################################################################
@@ -124,10 +124,10 @@ var_lidar = 0.25
 # var_gnss  = 0.01
 # var_lidar = 100.
 # # PART 3:
-var_imu_f = 0.1
-var_imu_w = 0.25
-var_gnss  = 0.01
-var_lidar = 0.25
+# var_imu_f = 0.1
+# var_imu_w = 0.25
+# var_gnss  = 0.01
+# var_lidar = 0.25
 
 
 ################################################################################################
@@ -181,7 +181,7 @@ def measurement_update(sensor_var, p_cov_check, y_k, p_check, v_check, q_check):
     # The orientation states are index 6, 7, 8 but to update the 
     # quaternion we need to convert orientation to quaternion
     q = Quaternion(axis_angle=state_errors[6:])
-    q_hat = q.quat_mult_left(q_check)
+    q_hat = q.quat_mult_left(q_check, out="np")
     # 3.4 Compute corrected covariance
     p_cov_hat = (np.identity(9) - K @ h_jac) @ p_cov_check
     return p_hat, v_hat, q_hat, p_cov_hat
@@ -201,10 +201,10 @@ for k in range(1, imu_f.data.shape[0]):  # start at 1 b/c we have initial predic
     Cns = Quaternion(*q_est[k-1]).to_mat()
     
     update = (Cns @ imu_f.data[k-1]) + g
-    p_est[k] = p_est[k - 1] + delta_t * v_est[k - 1] + 0.5 * delta_t**2 * update
-    v_est[k] = v_est[k - 1] + delta_t * update
+    p_check = p_est[k - 1] + delta_t * v_est[k - 1] + 0.5 * delta_t**2 * update
+    v_check = v_est[k - 1] + delta_t * update
     q = Quaternion(axis_angle=(imu_w.data[k-1] * delta_t))
-    q_est[k] = q.quat_mult_left(q_est[k - 1])
+    q_check = q.quat_mult_right(q_est[k - 1], out='np')
     # 1.1 Linearize the motion model and compute Jacobians
 
     # 2. Propagate uncertainit
@@ -219,51 +219,52 @@ for k in range(1, imu_f.data.shape[0]):  # start at 1 b/c we have initial predic
     Q[3:, 3:] = delta_t**2 * var_imu_w * np.eye(3)
 
     # Propogate covariance
-    p_cov[k] = F @ p_cov[k - 1] @ F.T + l_jac @ Q @ l_jac.T
+    p_cov_check = F @ p_cov[k - 1] @ F.T + l_jac @ Q @ l_jac.T
     updates[k, 0] = imu_f.t[k]
     
     matching_lidar_time = np.where(lidar.t == imu_f.t[k-1])
     if (np.size(matching_lidar_time) > 0):
         updates[k, 1] = 1 
-        #print("      Performing Lidar Update")
         lidar_index = matching_lidar_time[0][0]
         # Perform a gnss measurement update
-        p_est[k], v_est[k], q_est[k], p_cov[k] = measurement_update(
+        p_check, v_check, q_check, p_cov_check = measurement_update(
             # Observation noise
             var_lidar, 
             # State uncertainty
-            p_cov[k], 
+            p_cov_check, 
             # Observation
             lidar.data[lidar_index].T, 
             # Position state estimates after prediction step
-            p_est[k], 
+            p_check, 
             # Velocity state estimates after prediction step
-            v_est[k], 
+            v_check, 
             # Orientation as quaternion state estimates after prediction step
-            q_est[k])
-        
+            q_check)
     
     matching_gnss_time = np.where(gnss.t == imu_f.t[k])
     if (np.size(matching_gnss_time) > 0):
         updates[k, 2] = 1
-        #print("      Performing GNSS Update")
         gnss_index = matching_gnss_time[0][0]
         # Perform a gnss measurement update
-        p_est[k], v_est[k], q_est[k], p_cov[k] = measurement_update(
+        p_check, v_check, q_check, p_cov_check = measurement_update(
             # Observation noise
             var_gnss, 
             # State uncertainty
-            p_cov[k], 
+            p_cov_check, 
             # Observation
             gnss.data[gnss_index].T, 
             # Position state estimates after prediction step
-            p_est[k], 
+            p_check, 
             # Velocity state estimates after prediction step
-            v_est[k], 
+            v_check, 
             # Orientation as quaternion state estimates after prediction step
-            q_est[k])
+            q_check)
         
     # Update states (save)
+    p_est[k] = p_check
+    v_est[k] = v_check
+    p_cov[k] = p_cov_check
+    q_est[k] = q_check
 
 gnss_errors = np.zeros_like(gnss.data)
 for k in range(0, gnss.data.shape[0]):
@@ -275,16 +276,6 @@ for k in range(0, gnss.data.shape[0]):
         gt_pos = gt.p[matching_gt_time]
         gnss_errors[k] = gnss_pos - gt_pos
 
-# print(np.var(gnss_errors[:40, 0]))
-# print(np.var(gnss_errors[:40, 0]))
-# print(np.var(gnss_errors[:40, 0]))
-# plt.plot(gnss_errors[:, 0], label='East Errors')
-# plt.plot(gnss_errors[:, 1], label='North Errors')
-# plt.plot(gnss_errors[:, 2], label='Up Errors')
-# plt.legend()
-# plt.savefig('gnss_errors_compared_to_ground_truth.png')
-# plt.show()
-
 lidar_errors = np.zeros_like(lidar.data)
 for k in range(0, lidar.data.shape[0]):
     # Find a matching time between ground truth and lidar position
@@ -294,16 +285,6 @@ for k in range(0, lidar.data.shape[0]):
         lidar_pos = lidar.data[k]
         gt_pos = gt.p[matching_gt_time]
         lidar_errors[k] = lidar_pos - gt_pos
-
-# print(np.var(lidar_errors[:400, 0]))
-# print(np.var(lidar_errors[:400, 0]))
-# print(np.var(lidar_errors[:400, 0]))
-# plt.plot(lidar_errors[:, 0], label='East Errors')
-# plt.plot(lidar_errors[:, 1], label='North Errors')
-# plt.plot(lidar_errors[:, 2], label='Up Errors')
-# plt.legend()
-# plt.savefig('lidar_errors_compared_to_ground_truth.png')
-# plt.show()
 
 plt.plot(updates[:, 0], updates[:, 1], label='Lidar Update')
 plt.plot(updates[:, 0], updates[:, 2], label='GNSS Update')
@@ -315,24 +296,7 @@ print("Num gnss updates: " + str(np.sum(updates[:, 2])))
 print("Num Lidar updates: " + str(np.sum(updates[:, 1])))
 print("Num gnss measurements: " + str(np.shape(gnss.data)))
 print("Num lidar measurements: " + str(np.shape(lidar.data)))
-# w_errors = np.zeros_like(imu_w.data)
-# for k in range(0, imu_w.data.shape[0]):
-#     matching_gt_time = np.where(gt._t == imu_w.t[k])[0]
 
-#     if (np.size(matching_gt_time) > 0) and matching_gt_time < gt.w.shape[0]:
-#         w_ = imu_w.data[k]
-#         gt_w = gt.w[matching_gt_time]
-#         w_errors[k] = w_ - gt_w
-
-# print(np.var(w_errors[:400, 0]))
-# print(np.var(w_errors[:400, 0]))
-# print(np.var(w_errors[:400, 0]))
-# plt.plot(w_errors[:, 0])
-# plt.plot(w_errors[:, 1])
-# plt.plot(w_errors[:, 2])
-# plt.legend()
-# plt.savefig('w_errors_compared_to_ground_truth.png')
-# plt.show()
 #### 6. Results and Analysis ###################################################################
 
 ################################################################################################
